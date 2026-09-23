@@ -1,7 +1,7 @@
 # Uni Payment Flow Studio (UPFS)
 
 <div align="center">
-  <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=1200&auto=format&fit=crop&q=80" width="100%" alt="UPFS Banner" style="border-radius: 12px; max-height: 280px; object-fit: cover;" />
+<img width="2066" height="1134" alt="Screenshot 2026-09-24 004907" src="https://github.com/user-attachments/assets/df8d6662-f6ff-432b-b9f3-e0a372d2ef1c" />
 
   <br />
 
