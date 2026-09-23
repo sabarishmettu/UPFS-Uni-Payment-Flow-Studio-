@@ -1,0 +1,7 @@
+{
+  "name": "Uni Payment Flow Studio",
+  "description": "Unified visual payment workflow orchestration, multi-country banking, KYC rails, account authentication, and high-yield treasury management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
