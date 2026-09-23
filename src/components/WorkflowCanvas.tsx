@@ -641,7 +641,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         <div className="bg-[#111218]/90 backdrop-blur-md border border-[#2c2f3f] px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-3 text-xs text-[#9ea2b8] pointer-events-auto font-mono">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#ff6d5a] animate-pulse" />
-            <span className="font-semibold text-white">UnifiPay Visual DAG Engine</span>
+            <span className="font-semibold text-white">UPFS Visual DAG Engine</span>
           </div>
           <span className="text-[#3b3f54]">|</span>
           <span>{nodes.length} Nodes</span>

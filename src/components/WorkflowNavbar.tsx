@@ -38,13 +38,13 @@ export const WorkflowNavbar: React.FC<WorkflowNavbarProps> = ({
       <div className="flex items-center gap-4">
         {/* Brand mark */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#ff6d5a] to-[#ea4b71] flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-[#ff6d5a]/20">
-            UF
+          <div className="px-2 h-8 min-w-[36px] rounded-lg bg-gradient-to-tr from-[#ff6d5a] to-[#ea4b71] flex items-center justify-center text-white font-extrabold text-xs tracking-tight shadow-md shadow-[#ff6d5a]/20">
+            UPFS
           </div>
-          <div className="hidden md:flex flex-col">
-            <span className="font-bold text-xs tracking-wide text-white flex items-center gap-1.5">
+          <div className="flex flex-col">
+            <span className="font-bold text-xs sm:text-sm tracking-wide text-white flex items-center gap-1.5">
               <span>Uni Payment Flow Studio</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#242735] text-[#ff6d5a] border border-[#ff6d5a]/30 font-semibold">
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#242735] text-[#ff6d5a] border border-[#ff6d5a]/30 font-semibold hidden sm:inline-block">
                 v2.0
               </span>
             </span>
