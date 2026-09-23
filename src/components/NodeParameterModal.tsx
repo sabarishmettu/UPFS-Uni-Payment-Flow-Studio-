@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlowNode, LinkedBankAccountItem } from '../data/workflowData';
+import { FlowNode, FlowEdge, LinkedBankAccountItem } from '../data/workflowData';
 import { 
   X, 
   Play, 
@@ -18,31 +18,45 @@ import {
   Lock,
   Eye,
   EyeOff,
-  RefreshCw
+  RefreshCw,
+  Link2,
+  Unlink,
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 
 interface NodeParameterModalProps {
   node: FlowNode;
+  nodes?: FlowNode[];
+  edges?: FlowEdge[];
   onClose: () => void;
   onUpdateParameters: (nodeId: string, parameters: Record<string, any>) => void;
   onDeleteNode: (nodeId: string) => void;
   onTestStep: (nodeId: string) => void;
   isExecutingStep?: boolean;
+  onAddEdge?: (sourceId: string, targetId: string) => void;
+  onDeleteEdge?: (edgeId: string) => void;
 }
 
 export const NodeParameterModal: React.FC<NodeParameterModalProps> = ({
   node,
+  nodes = [],
+  edges = [],
   onClose,
   onUpdateParameters,
   onDeleteNode,
   onTestStep,
-  isExecutingStep = false
+  isExecutingStep = false,
+  onAddEdge,
+  onDeleteEdge
 }) => {
-  const [activeTab, setActiveTab] = useState<'parameters' | 'input' | 'output'>('parameters');
+  const [activeTab, setActiveTab] = useState<'parameters' | 'connections' | 'input' | 'output'>('parameters');
   const [copied, setCopied] = useState(false);
   const [localParams, setLocalParams] = useState<Record<string, any>>(node.parameters || {});
   const [showMaskedAccount, setShowMaskedAccount] = useState<Record<string, boolean>>({});
   const [isRefreshingLiveBalance, setIsRefreshingLiveBalance] = useState(false);
+  const [selectedConnectTargetId, setSelectedConnectTargetId] = useState<string>('');
+  const [selectedConnectSourceId, setSelectedConnectSourceId] = useState<string>('');
 
   // New Bank Account Form Drawer State
   const [isAddingBank, setIsAddingBank] = useState(false);
@@ -295,6 +309,19 @@ export const NodeParameterModal: React.FC<NodeParameterModalProps> = ({
               {isIdentityNode ? <UserCheck className="w-3.5 h-3.5" /> : <Code2 className="w-3.5 h-3.5" />}
               <span>{isIdentityNode ? 'Identity & Linked Banks' : 'Parameters'}</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('connections')}
+              className={`px-4 h-full text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === 'connections'
+                  ? 'border-[#ff6d5a] text-[#ff6d5a]'
+                  : 'border-transparent text-[#9ea2b8] hover:text-white'
+              }`}
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              <span>Connections & Lines ({edges.filter(e => e.source === node.id || e.target === node.id).length})</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('input')}
               className={`px-4 h-full text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 ${
@@ -740,6 +767,168 @@ export const NodeParameterModal: React.FC<NodeParameterModalProps> = ({
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'connections' && (
+            <div className="space-y-6 max-w-2xl mx-auto">
+              {/* Incoming Connections Section */}
+              <div className="p-4 bg-[#14151c] rounded-xl border border-[#2c2f3f] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ArrowLeft className="w-4 h-4 text-cyan-400" />
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Incoming Connections (Sources)</h4>
+                  </div>
+                  <span className="text-[10px] text-[#9ea2b8] font-mono">
+                    {edges.filter(e => e.target === node.id).length} links connected
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {edges.filter(e => e.target === node.id).length === 0 ? (
+                    <div className="p-3 bg-[#1c1e29] rounded-lg border border-dashed border-[#2c2f3f] text-center text-xs text-[#9ea2b8]">
+                      No incoming connections. This node acts as an entry/root trigger.
+                    </div>
+                  ) : (
+                    edges.filter(e => e.target === node.id).map(edge => {
+                      const sourceNode = nodes.find(n => n.id === edge.source);
+                      return (
+                        <div key={edge.id} className="flex items-center justify-between p-2.5 bg-[#1c1e29] border border-[#2c2f3f] rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                            <div>
+                              <div className="text-xs font-semibold text-white">{sourceNode?.name || edge.source}</div>
+                              <div className="text-[10px] text-[#9ea2b8] font-mono">{sourceNode?.type || 'Node'}</div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteEdge && onDeleteEdge(edge.id)}
+                            className="px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 rounded text-[10px] font-mono flex items-center gap-1 transition-colors"
+                          >
+                            <Unlink className="w-3 h-3" />
+                            <span>Disconnect</span>
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Add new incoming connection */}
+                <div className="pt-2 border-t border-[#242735] flex items-center gap-2">
+                  <select
+                    value={selectedConnectSourceId}
+                    onChange={(e) => setSelectedConnectSourceId(e.target.value)}
+                    className="flex-1 bg-[#1c1e29] border border-[#2c2f3f] text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none"
+                  >
+                    <option value="">+ Connect another node as source...</option>
+                    {nodes
+                      .filter(n => n.id !== node.id && !edges.some(e => e.source === n.id && e.target === node.id))
+                      .map(n => (
+                        <option key={n.id} value={n.id}>
+                          {n.name} ({n.type})
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!selectedConnectSourceId}
+                    onClick={() => {
+                      if (selectedConnectSourceId && onAddEdge) {
+                        onAddEdge(selectedConnectSourceId, node.id);
+                        setSelectedConnectSourceId('');
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      selectedConnectSourceId 
+                        ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-md' 
+                        : 'bg-[#282b3a] text-[#676a82] cursor-not-allowed'
+                    }`}
+                  >
+                    Link Source
+                  </button>
+                </div>
+              </div>
+
+              {/* Outgoing Connections Section */}
+              <div className="p-4 bg-[#14151c] rounded-xl border border-[#2c2f3f] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ArrowRight className="w-4 h-4 text-[#ff6d5a]" />
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Outgoing Connections (Targets)</h4>
+                  </div>
+                  <span className="text-[10px] text-[#9ea2b8] font-mono">
+                    {edges.filter(e => e.source === node.id).length} links connected
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {edges.filter(e => e.source === node.id).length === 0 ? (
+                    <div className="p-3 bg-[#1c1e29] rounded-lg border border-dashed border-[#2c2f3f] text-center text-xs text-[#9ea2b8]">
+                      No outgoing connections. This node terminates the flow or output.
+                    </div>
+                  ) : (
+                    edges.filter(e => e.source === node.id).map(edge => {
+                      const targetNode = nodes.find(n => n.id === edge.target);
+                      return (
+                        <div key={edge.id} className="flex items-center justify-between p-2.5 bg-[#1c1e29] border border-[#2c2f3f] rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#ff6d5a]" />
+                            <div>
+                              <div className="text-xs font-semibold text-white">{targetNode?.name || edge.target}</div>
+                              <div className="text-[10px] text-[#9ea2b8] font-mono">{targetNode?.type || 'Node'}</div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteEdge && onDeleteEdge(edge.id)}
+                            className="px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 rounded text-[10px] font-mono flex items-center gap-1 transition-colors"
+                          >
+                            <Unlink className="w-3 h-3" />
+                            <span>Disconnect</span>
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Add new outgoing connection */}
+                <div className="pt-2 border-t border-[#242735] flex items-center gap-2">
+                  <select
+                    value={selectedConnectTargetId}
+                    onChange={(e) => setSelectedConnectTargetId(e.target.value)}
+                    className="flex-1 bg-[#1c1e29] border border-[#2c2f3f] text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none"
+                  >
+                    <option value="">+ Connect this node to target...</option>
+                    {nodes
+                      .filter(n => n.id !== node.id && !edges.some(e => e.source === node.id && e.target === n.id))
+                      .map(n => (
+                        <option key={n.id} value={n.id}>
+                          {n.name} ({n.type})
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!selectedConnectTargetId}
+                    onClick={() => {
+                      if (selectedConnectTargetId && onAddEdge) {
+                        onAddEdge(node.id, selectedConnectTargetId);
+                        setSelectedConnectTargetId('');
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      selectedConnectTargetId 
+                        ? 'bg-[#ff6d5a] hover:bg-[#e05645] text-white shadow-md' 
+                        : 'bg-[#282b3a] text-[#676a82] cursor-not-allowed'
+                    }`}
+                  >
+                    Link Target
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

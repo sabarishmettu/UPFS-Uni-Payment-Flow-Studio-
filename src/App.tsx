@@ -35,30 +35,105 @@ export default function App() {
 
   // Execution simulation state
   const [isRunning, setIsRunning] = useState(false);
-  const [activeExecutionIndex, setActiveExecutionIndex] = useState(-1);
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const [executedNodeIds, setExecutedNodeIds] = useState<string[]>([]);
   const [isExecutingStep, setIsExecutingStep] = useState(false);
 
-  // Run full workflow simulation
+  // Check if adding edge would create a directed cycle
+  const wouldCreateCycle = (sourceId: string, targetId: string, currentEdges: FlowEdge[]): boolean => {
+    if (sourceId === targetId) return true;
+    const visited = new Set<string>();
+    const queue = [targetId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (current === sourceId) return true;
+      if (!visited.has(current)) {
+        visited.add(current);
+        const nextNodes = currentEdges.filter(e => e.source === current).map(e => e.target);
+        queue.push(...nextNodes);
+      }
+    }
+    return false;
+  };
+
+  // Topological sorting for true DAG execution sequence
+  const getTopologicalOrder = (): string[] => {
+    const inDegree: Record<string, number> = {};
+    const adj: Record<string, string[]> = {};
+    
+    nodes.forEach(n => {
+      inDegree[n.id] = 0;
+      adj[n.id] = [];
+    });
+
+    edges.forEach(e => {
+      if (inDegree[e.target] !== undefined) {
+        inDegree[e.target] = (inDegree[e.target] || 0) + 1;
+      }
+      if (adj[e.source]) {
+        adj[e.source].push(e.target);
+      }
+    });
+
+    const queue: string[] = [];
+    nodes.forEach(n => {
+      if ((inDegree[n.id] || 0) === 0) {
+        queue.push(n.id);
+      }
+    });
+
+    const order: string[] = [];
+    while (queue.length > 0) {
+      const u = queue.shift()!;
+      order.push(u);
+      (adj[u] || []).forEach(v => {
+        inDegree[v]--;
+        if (inDegree[v] === 0) {
+          queue.push(v);
+        }
+      });
+    }
+
+    // Include any standalone or island nodes
+    nodes.forEach(n => {
+      if (!order.includes(n.id)) {
+        order.push(n.id);
+      }
+    });
+
+    return order;
+  };
+
+  // Run full workflow DAG simulation
   const handleExecuteWorkflow = () => {
     if (isRunning) return;
-    setIsRunning(true);
-    setActiveExecutionIndex(0);
+    const executionOrder = getTopologicalOrder();
+    if (executionOrder.length === 0) return;
 
-    nodes.forEach((_, idx) => {
+    setIsRunning(true);
+    setExecutedNodeIds([]);
+    setActiveNodeId(executionOrder[0]);
+
+    executionOrder.forEach((nodeId, idx) => {
       setTimeout(() => {
-        setActiveExecutionIndex(idx);
-        if (idx === nodes.length - 1) {
+        setActiveNodeId(nodeId);
+        setExecutedNodeIds(prev => [...prev, executionOrder[Math.max(0, idx - 1)]].filter(Boolean));
+
+        if (idx === executionOrder.length - 1) {
           setTimeout(() => {
+            setExecutedNodeIds(executionOrder);
+            setActiveNodeId(null);
             setIsRunning(false);
           }, 900);
         }
-      }, (idx + 1) * 800);
+      }, (idx + 1) * 850);
     });
   };
 
   const handleResetWorkflow = () => {
     setIsRunning(false);
-    setActiveExecutionIndex(-1);
+    setActiveNodeId(null);
+    setExecutedNodeIds([]);
   };
 
   const handleUpdateNodePosition = (nodeId: string, pos: { x: number; y: number }) => {
@@ -85,11 +160,40 @@ export default function App() {
     }, 600);
   };
 
+  const handleAddEdge = (sourceId: string, targetId: string) => {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+    
+    // Check for duplicates
+    if (edges.some(e => e.source === sourceId && e.target === targetId)) {
+      return;
+    }
+
+    // Check for cycle prevention
+    if (wouldCreateCycle(sourceId, targetId, edges)) {
+      console.warn(`Connection from ${sourceId} to ${targetId} blocked: would create a cycle.`);
+      return;
+    }
+
+    setEdges(prev => [
+      ...prev,
+      {
+        id: `e-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        source: sourceId,
+        target: targetId,
+        animated: true
+      }
+    ]);
+  };
+
+  const handleDeleteEdge = (edgeId: string) => {
+    setEdges(prev => prev.filter(e => e.id !== edgeId));
+  };
+
   const handleSelectTemplate = (template: typeof AVAILABLE_NODE_TEMPLATES[0]) => {
     const newId = `node-${Date.now()}`;
-    const lastNode = nodes[nodes.length - 1];
-    const newPos = lastNode 
-      ? { x: lastNode.position.x + 320, y: lastNode.position.y }
+    const anchorNode = selectedNode || nodes[nodes.length - 1];
+    const newPos = anchorNode 
+      ? { x: anchorNode.position.x + 280, y: anchorNode.position.y + 20 }
       : { x: 100, y: 200 };
 
     let defaultParams: Record<string, any> = { enabled: true, timeoutSeconds: 30 };
@@ -169,8 +273,8 @@ export default function App() {
 
     setNodes(prev => [...prev, newNode]);
 
-    if (lastNode) {
-      setEdges(prev => [...prev, { id: `e-${Date.now()}`, source: lastNode.id, target: newId, animated: true }]);
+    if (anchorNode) {
+      setEdges(prev => [...prev, { id: `e-${Date.now()}`, source: anchorNode.id, target: newId, animated: true }]);
     }
 
     setIsPaletteOpen(false);
@@ -212,9 +316,12 @@ export default function App() {
               onSelectNode={(node) => setSelectedNode(node)}
               onOpenPalette={() => setIsPaletteOpen(true)}
               isRunning={isRunning}
-              activeExecutionIndex={activeExecutionIndex}
+              activeNodeId={activeNodeId}
+              executedNodeIds={executedNodeIds}
               onExecuteWorkflow={handleExecuteWorkflow}
               onUpdateNodePosition={handleUpdateNodePosition}
+              onAddEdge={handleAddEdge}
+              onDeleteEdge={handleDeleteEdge}
             />
           )}
 
@@ -272,11 +379,15 @@ export default function App() {
       {selectedNode && (
         <NodeParameterModal
           node={selectedNode}
+          nodes={nodes}
+          edges={edges}
           onClose={() => setSelectedNode(null)}
           onUpdateParameters={handleUpdateParameters}
           onDeleteNode={handleDeleteNode}
           onTestStep={handleTestStep}
           isExecutingStep={isExecutingStep}
+          onAddEdge={handleAddEdge}
+          onDeleteEdge={handleDeleteEdge}
         />
       )}
 

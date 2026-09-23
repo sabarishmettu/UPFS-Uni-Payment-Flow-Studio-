@@ -291,8 +291,9 @@ export const DEFAULT_FLOW_EDGES: FlowEdge[] = [
   // Identity (Name & ID) branching directly into the 2 linked bank accounts:
   { id: 'e-id-bank1', source: 'node-identity', target: 'node-bank-1', animated: true },
   { id: 'e-id-bank2', source: 'node-identity', target: 'node-bank-2', animated: true },
-  // Primary Bank account flows into Treasury Auto-Sweep:
+  // Both Primary and Secondary Bank accounts connect into Treasury Auto-Sweep:
   { id: 'e-bank1-sweep', source: 'node-bank-1', target: 'node-sweep', animated: true },
+  { id: 'e-bank2-sweep', source: 'node-bank-2', target: 'node-sweep', animated: true },
   // Auto-Sweep splits into Fixed Deposit and Mutual Fund SIP:
   { id: 'e-sweep-fd', source: 'node-sweep', target: 'node-fd', animated: true },
   { id: 'e-sweep-sip', source: 'node-sweep', target: 'node-sip', animated: true },
